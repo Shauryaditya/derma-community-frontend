@@ -1,13 +1,7 @@
-type StrapiItem = {
-  id: number;
-  documentId?: string;
-  attributes?: Record<string, unknown>;
-  [key: string]: unknown;
-};
-
-type CollectionResponse = {
-  data?: StrapiItem[];
-};
+import { StrapiItem, CollectionResponse } from "./types";
+import { field, initials } from "./utils/strapi";
+import { VideoPost, EmptyState } from "./components/VideoPost";
+import { InfiniteVideoFeed } from "./components/InfiniteVideoFeed";
 
 const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337";
 
@@ -34,158 +28,36 @@ async function getCollection(path: string) {
   }
 }
 
-function field<T>(item: StrapiItem | undefined | null, key: string, fallback: T): T {
-  if (!item) {
-    return fallback;
-  }
-
-  const value = item.attributes?.[key] ?? item[key];
-  return (value ?? fallback) as T;
-}
-
-function plainText(value: unknown) {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (Array.isArray(value)) {
-    return value
-      .map((block) => {
-        if (!block || typeof block !== "object" || !("children" in block)) {
-          return "";
-        }
-
-        const children = (block as { children?: Array<{ text?: string }> }).children;
-        return children?.map((child) => child.text ?? "").join("") ?? "";
-      })
-      .filter(Boolean)
-      .join(" ");
-  }
-
-  return "";
-}
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function youtubeEmbedUrl(url: string) {
+async function getCollectionWithMeta(path: string) {
   try {
-    const parsedUrl = new URL(url);
+    const response = await fetch(`${STRAPI_URL}${path}`, {
+      next: { revalidate: 15 },
+    });
 
-    if (parsedUrl.hostname.includes("youtu.be")) {
-      return `https://www.youtube.com/embed/${parsedUrl.pathname.replace("/", "")}`;
+    if (!response.ok) {
+      return { data: [], total: 0 };
     }
 
-    if (parsedUrl.pathname.startsWith("/shorts/")) {
-      return `https://www.youtube.com/embed/${parsedUrl.pathname.split("/")[2]}`;
-    }
-
-    const watchId = parsedUrl.searchParams.get("v");
-    if (watchId) {
-      return `https://www.youtube.com/embed/${watchId}`;
-    }
+    const payload = (await response.json()) as CollectionResponse;
+    return {
+      data: payload.data ?? [],
+      total: payload.meta?.pagination?.total ?? 0,
+    };
   } catch {
-    return "";
+    return { data: [], total: 0 };
   }
-
-  return "";
-}
-
-function formatDate(value: unknown) {
-  if (typeof value !== "string") {
-    return "Today";
-  }
-
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-  }).format(new Date(value));
-}
-
-function EmptyState({ label }: { label: string }) {
-  return (
-    <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-5 text-sm text-slate-500">
-      {label}
-    </div>
-  );
-}
-
-function VideoPost({ video }: { video: StrapiItem }) {
-  const title = field(video, "title", "Untitled video");
-  const description = plainText(field(video, "description", ""));
-  const videoUrl = field(video, "videoUrl", "");
-  const embedUrl = youtubeEmbedUrl(videoUrl);
-  const category = field<StrapiItem | null>(video, "category", null);
-  const doctor = field<StrapiItem | null>(video, "doctor", null);
-  const doctorName = field(doctor, "name", "Derma Doctor");
-  const specialization = field(doctor, "specialization", "Dermatologist");
-  const categoryName = field(category, "name", "Skin care");
-
-  return (
-    <article className="overflow-hidden rounded-xl bg-white border border-slate-100 shadow-sm transition duration-300 hover:shadow-md">
-      <div className="flex items-center gap-3 px-5 py-4">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-brand-secondary text-sm font-semibold text-brand-primary">
-          {initials(doctorName)}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-sm font-semibold text-brand-dark">{doctorName}</h2>
-            <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/10">
-              Verified
-            </span>
-          </div>
-          <p className="truncate text-xs text-slate-500">
-            {specialization} • {formatDate(field(video, "publishedAt", ""))}
-          </p>
-        </div>
-        <span className="rounded-full bg-brand-accent/10 px-3 py-1 text-xs font-semibold text-brand-accent border border-brand-accent/20">
-          {categoryName}
-        </span>
-      </div>
-
-      <div className="px-5 pb-4">
-        <h3 className="text-xl font-bold tracking-tight text-brand-dark">{title}</h3>
-        {description && (
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            {description}
-          </p>
-        )}
-      </div>
-
-      <div className="bg-brand-dark aspect-video overflow-hidden">
-        {embedUrl ? (
-          <iframe
-            className="h-full w-full"
-            src={embedUrl}
-            title={title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-400">
-            No YouTube URL provided for this post.
-          </div>
-        )}
-      </div>
-    </article>
-  );
 }
 
 export default async function Home() {
-  const [categories, videos, doctors] = await Promise.all([
+  const [categories, videoData, doctors] = await Promise.all([
     getCollection(endpoints.categories),
-    getCollection(endpoints.videos),
+    getCollectionWithMeta("/api/videos?populate=*&pagination[page]=1&pagination[pageSize]=5"),
     getCollection(endpoints.doctors),
   ]);
 
+  const videos = videoData.data;
+  const totalVideos = videoData.total;
   const featuredVideo = videos[0];
-  const feedVideos = videos.slice(0, 8);
 
   return (
     <main className="min-h-screen bg-brand-light text-brand-dark font-sans">
@@ -255,7 +127,7 @@ export default async function Home() {
               </div>
               <div className="grid grid-cols-3 gap-3 text-center sm:w-auto">
                 <div className="rounded-lg bg-brand-secondary/30 px-3 py-2 border border-brand-secondary">
-                  <p className="text-lg font-bold text-brand-primary">{videos.length}</p>
+                  <p className="text-lg font-bold text-brand-primary">{totalVideos}</p>
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Videos</p>
                 </div>
                 <div className="rounded-lg bg-brand-secondary/30 px-3 py-2 border border-brand-secondary">
@@ -277,14 +149,15 @@ export default async function Home() {
             </div>
           )}
 
-          {feedVideos.length === 0 ? (
+          {videos.length === 0 ? (
             <EmptyState label="Publish a video in Strapi to see the library feed." />
           ) : (
-            <div className="space-y-6">
-              {feedVideos.slice(featuredVideo ? 1 : 0).map((video) => (
-                <VideoPost key={video.documentId ?? video.id} video={video} />
-              ))}
-            </div>
+            <InfiniteVideoFeed
+              initialVideos={videos}
+              totalCount={totalVideos}
+              strapiUrl={STRAPI_URL}
+              featuredVideoId={featuredVideo?.documentId ?? featuredVideo?.id}
+            />
           )}
         </section>
 
