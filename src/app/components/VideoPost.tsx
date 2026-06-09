@@ -21,6 +21,83 @@ export function VideoPost({ video }: { video: StrapiItem }) {
   const specialization = field(doctor, "specialization", "Dermatologist");
   const categoryName = field(category, "name", "Skin care");
 
+  const isShort = videoUrl.includes("/shorts/");
+
+  if (isShort) {
+    return (
+      <article className="overflow-hidden rounded-xl bg-white border border-slate-100 shadow-sm transition duration-300 hover:shadow-md md:flex md:flex-row md:h-[480px]">
+        {/* Video Column */}
+        <div className="bg-black shrink-0 relative flex items-center justify-center w-full md:w-[270px] h-[480px] md:h-full aspect-[9/16] overflow-hidden">
+          {embedUrl ? (
+            <iframe
+              className="h-full w-full absolute inset-0 border-0"
+              src={embedUrl}
+              title={title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-400">
+              No YouTube URL provided.
+            </div>
+          )}
+        </div>
+
+        {/* Content Column */}
+        <div className="flex-1 flex flex-col justify-between p-5 md:p-6 min-w-0">
+          <div>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-secondary text-sm font-semibold text-brand-primary">
+                  {initials(doctorName)}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <h2 className="truncate text-sm font-semibold text-brand-dark">{doctorName}</h2>
+                    <span className="inline-flex items-center rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-600/10 shrink-0">
+                      Verified
+                    </span>
+                  </div>
+                  <p className="truncate text-xs text-slate-500">
+                    {specialization}
+                  </p>
+                </div>
+              </div>
+              <span className="rounded-full bg-brand-accent/10 px-2.5 py-0.5 text-xs font-semibold text-brand-accent border border-brand-accent/20 shrink-0">
+                {categoryName}
+              </span>
+            </div>
+
+            <h3 className="text-lg md:text-xl font-bold tracking-tight text-brand-dark line-clamp-2 md:line-clamp-3">
+              {title}
+            </h3>
+            {description && (
+              <p className="mt-3 text-sm leading-relaxed text-slate-600 line-clamp-4 md:line-clamp-6">
+                {description}
+              </p>
+            )}
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Published {formatDate(field(video, "publishedAt", ""))}</span>
+            <a
+              href={videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-brand-primary hover:text-brand-primary-light font-semibold transition"
+            >
+              Watch on YouTube
+              <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  // Standard Video Layout (16:9)
   return (
     <article className="overflow-hidden rounded-xl bg-white border border-slate-100 shadow-sm transition duration-300 hover:shadow-md">
       <div className="flex items-center gap-3 px-5 py-4">
@@ -55,7 +132,7 @@ export function VideoPost({ video }: { video: StrapiItem }) {
       <div className="bg-brand-dark aspect-video overflow-hidden">
         {embedUrl ? (
           <iframe
-            className="h-full w-full"
+            className="h-full w-full border-0"
             src={embedUrl}
             title={title}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
