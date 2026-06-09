@@ -24,6 +24,7 @@ export function InfiniteVideoFeed({
   const [hasMore, setHasMore] = useState(initialVideos.length < totalCount);
   const [viewMode, setViewMode] = useState<"cards" | "immersive">("cards");
   const observerRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 768) {
@@ -37,13 +38,19 @@ export function InfiniteVideoFeed({
   useEffect(() => {
     if (!observerRef.current || !hasMore || isLoading) return;
 
+    // Use container as root in immersive mode for reliable IntersectionObserver on mobile
+    const rootElement = viewMode === "immersive" ? containerRef.current : null;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
           loadMoreVideos();
         }
       },
-      { threshold: 0.1 }
+      { 
+        root: rootElement,
+        threshold: 0.1 
+      }
     );
 
     observer.observe(observerRef.current);
@@ -51,7 +58,7 @@ export function InfiniteVideoFeed({
     return () => {
       observer.disconnect();
     };
-  }, [hasMore, isLoading, page, videos.length]);
+  }, [hasMore, isLoading, page, videos.length, viewMode]);
 
   const loadMoreVideos = async () => {
     if (isLoading) return;
@@ -132,7 +139,10 @@ export function InfiniteVideoFeed({
         </div>
 
         {/* Immersive Scroll Snap Feed */}
-        <div className="fixed inset-x-0 bottom-0 top-16 z-20 md:relative md:inset-auto md:top-0 md:h-[680px] md:rounded-2xl md:border md:border-slate-800 bg-black overflow-y-scroll snap-y snap-mandatory scrollbar-none">
+        <div 
+          ref={containerRef}
+          className="fixed inset-x-0 bottom-0 top-16 z-20 md:relative md:inset-auto md:top-0 md:h-[680px] md:rounded-2xl md:border md:border-slate-800 bg-black overflow-y-scroll snap-y snap-mandatory scrollbar-none"
+        >
           {filteredVideos.map((video) => (
             <div
               key={video.documentId ?? video.id}
