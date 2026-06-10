@@ -26,11 +26,8 @@ export function InfiniteVideoFeed({
   const observerRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth < 768) {
-      setViewMode("immersive");
-    }
-  }, []);
+  // On mobile, default to cards feed (per user request to not go directly into immersive reel feed).
+  // Users can still switch to immersive mode manually using the toggle bar.
 
   // Match the page size used in initial server load
   const pageSize = 5;
