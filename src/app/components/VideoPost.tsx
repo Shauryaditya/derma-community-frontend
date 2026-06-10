@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import { StrapiItem } from "../types";
 import { field, plainText, initials, youtubeEmbedUrl, formatDate } from "../utils/strapi";
 
@@ -11,6 +13,7 @@ export function EmptyState({ label }: { label: string }) {
 }
 
 export function VideoPost({ video }: { video: StrapiItem }) {
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
   const title = field(video, "title", "Untitled video");
   const description = plainText(field(video, "description", ""));
   const videoUrl = field(video, "videoUrl", "");
@@ -22,6 +25,10 @@ export function VideoPost({ video }: { video: StrapiItem }) {
   const categoryName = field(category, "name", "Skin care");
 
   const isShort = videoUrl.includes("/shorts/");
+  const shouldTruncate = description.length > 180;
+  const displayDescription = shouldTruncate && !isDescExpanded
+    ? `${description.slice(0, 180)}...`
+    : description;
 
   if (isShort) {
     return (
@@ -54,9 +61,17 @@ export function VideoPost({ video }: { video: StrapiItem }) {
             {title}
           </h3>
           {description && (
-            <p className="mt-3 text-sm leading-relaxed text-slate-600 line-clamp-4 md:line-clamp-6">
-              {description}
-            </p>
+            <div className="mt-3 text-sm leading-relaxed text-slate-600">
+              <span className="whitespace-pre-line">{displayDescription}</span>
+              {shouldTruncate && (
+                <button
+                  onClick={() => setIsDescExpanded(!isDescExpanded)}
+                  className="text-brand-primary hover:text-brand-primary-light font-semibold ml-1 cursor-pointer focus:outline-none inline-block"
+                >
+                  {isDescExpanded ? "Read less" : "Read more"}
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -122,9 +137,17 @@ export function VideoPost({ video }: { video: StrapiItem }) {
       <div className="px-5 pb-4">
         <h3 className="text-xl font-bold tracking-tight text-brand-dark">{title}</h3>
         {description && (
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            {description}
-          </p>
+          <div className="mt-2 text-sm leading-relaxed text-slate-600">
+            <span className="whitespace-pre-line">{displayDescription}</span>
+            {shouldTruncate && (
+              <button
+                onClick={() => setIsDescExpanded(!isDescExpanded)}
+                className="text-brand-primary hover:text-brand-primary-light font-semibold ml-1 cursor-pointer focus:outline-none inline-block"
+              >
+                {isDescExpanded ? "Read less" : "Read more"}
+              </button>
+            )}
+          </div>
         )}
       </div>
 

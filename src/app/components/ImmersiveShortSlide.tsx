@@ -4,6 +4,7 @@ import { field, plainText, initials, youtubeEmbedUrl, formatDate } from "../util
 
 export function ImmersiveShortSlide({ video }: { video: StrapiItem }) {
   const [copied, setCopied] = useState(false);
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
   const title = field(video, "title", "Untitled video");
   const description = plainText(field(video, "description", ""));
   const videoUrl = field(video, "videoUrl", "");
@@ -13,6 +14,11 @@ export function ImmersiveShortSlide({ video }: { video: StrapiItem }) {
   const doctorName = field(doctor, "name", "Derma Doctor");
   const specialization = field(doctor, "specialization", "Dermatologist");
   const categoryName = field(category, "name", "Skin care");
+
+  const shouldTruncate = description.length > 90;
+  const displayDescription = shouldTruncate && !isDescExpanded 
+    ? `${description.slice(0, 90)}...` 
+    : description;
 
   const handleShare = () => {
     navigator.clipboard.writeText(videoUrl);
@@ -110,10 +116,18 @@ export function ImmersiveShortSlide({ video }: { video: StrapiItem }) {
           {title}
         </h4>
 
-        {/* Video Description (Scrollable box) */}
+        {/* Video Description */}
         {description && (
-          <div className="pointer-events-auto bg-black/30 backdrop-blur-sm p-2 rounded-lg border border-white/5 max-h-[72px] overflow-y-auto mt-0.5 text-[11px] leading-relaxed text-slate-300">
-            {description}
+          <div className="pointer-events-auto bg-black/30 backdrop-blur-sm p-2.5 rounded-lg border border-white/5 mt-0.5 text-[11px] leading-relaxed text-slate-300 max-h-[140px] overflow-y-auto transition-all duration-300">
+            <span className="whitespace-pre-line">{displayDescription}</span>
+            {shouldTruncate && (
+              <button
+                onClick={() => setIsDescExpanded(!isDescExpanded)}
+                className="text-brand-accent hover:text-brand-accent-light font-bold ml-1 cursor-pointer pointer-events-auto inline-block focus:outline-none"
+              >
+                {isDescExpanded ? " Read less" : " Read more"}
+              </button>
+            )}
           </div>
         )}
 
